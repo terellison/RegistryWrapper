@@ -5,13 +5,71 @@ using Microsoft.Win32;
 
 namespace RegistryWrapper
 {
+    /// <summary>
+    /// Wrapper for accessing the Windows Registry
+    /// </summary>
     public class RegistryWrapper
     {
+        /// <summary>
+        /// Enum for determining the root key to be accessed (e.g. HKEY_LOCAL_MACHINE = LocalMachine)
+        /// </summary>
+        public enum RegistryKeyRoot
+        {
+            /// <summary>
+            /// For accessing HKEY_Users
+            /// </summary>
+            Users,
+            /// <summary>
+            /// For accessing HKEY_Current_User
+            /// </summary>
+            CurrentUser,
+            /// <summary>
+            /// For accessing HKEY_Local_Machine
+            /// </summary>
+            LocalMachine,
+            /// <summary>
+            /// For accessing HKEY_Current_Config
+            /// </summary>
+            CurrentConfig,
+            /// <summary>
+            /// For accessing HKEY_Classes_Root
+            /// </summary>
+            ClassesRoot,
+            /// <summary>
+            /// OBSOLETE For accessing HKEY_Dyn_Data
+            /// </summary>
+            [Obsolete("The DynData registry key only works on Win9x, which is no longer supported by the CLR.  On NT-based operating systems, use the PerformanceData registry key instead.")]
+            DynData,
+            /// <summary>
+            /// For accessing HKEY_Performance_Data
+            /// </summary>
+            PerformanceData
+        }
 
-        public enum RegistryKeyRoot { Users, CurrentUser, LocalMachine, CurrentConfig, ClassesRoot, DynData, PerformanceData }
-
-        public enum RegistryVersion { Only32Bit, Only64Bit, Both }
-
+        /// <summary>
+        /// Enum for determining which version of the registry to access. Can be 32-Bit, 64-Bit, or both
+        /// </summary>
+        public enum RegistryVersion
+        {
+            /// <summary>
+            /// Restricts access to exclusively the 32-Bit registry
+            /// </summary>
+            Only32Bit,
+            /// <summary>
+            /// Restricts access to exclusively the 64-Bit registry
+            /// </summary>
+            Only64Bit,
+            /// <summary>
+            /// Allows for access to both the 32-Bit and 64-Bit registries simultaneously
+            /// </summary>
+            Both
+        }
+        /// <summary>
+        /// Returns the registry key at the path specified
+        /// </summary>
+        /// <param name="keyPath">Full path of the key to be read</param>
+        /// <param name="registryVersion">Version of the registry to be read from</param>
+        /// <returns>A key container with the values</returns>
         public RegistryKeyContainer ReadKey(string keyPath, RegistryVersion registryVersion)
         {
             var keyPathSplit = keyPath.Split('\\');
@@ -25,10 +83,15 @@ namespace RegistryWrapper
             }
             return ReadKey(registryKeyRoot, keyPath, registryVersion);
         }
-
+        /// <summary>
+        /// Returns the registry key at the path specified
+        /// </summary>
+        /// <param name="registryKeyRoot">Enum of the root key to read from (e.g. HKEY_LOCAL_MACHINE = LocalMachine)</param>
+        /// <param name="keyPath">Path to the key to read from (without the root key)</param>
+        /// <param name="registryVersion">Version of the registry to read from. Can be 32-Bit, 64-Bit, or both</param>
+        /// <returns></returns>
         public RegistryKeyContainer ReadKey(RegistryKeyRoot registryKeyRoot , string keyPath, RegistryVersion registryVersion)
         {
-            RegistryKeyContainer keyContainer;
             var _32BitValues = new List<KeyValuePair<string, object>>();
             var _64BitValues = new List<KeyValuePair<string, object>>();
             RegistryHive rh;
@@ -91,10 +154,16 @@ namespace RegistryWrapper
                     break;
             }
 
-            keyContainer = new RegistryKeyContainer(registryKeyRoot,keyPath, _64BitValues, _32BitValues, registryVersion);
+            var keyContainer = new RegistryKeyContainer(registryKeyRoot,keyPath, _64BitValues, _32BitValues, registryVersion);
             return keyContainer;
         }
-
+        /// <summary>
+        /// Writes a value to given key
+        /// </summary>
+        /// <param name="registryKeyRoot">Enum of the root key to read from (e.g. HKEY_LOCAL_MACHINE = LocalMachine)</param>
+        /// <param name="key">Path to the key to write to. If part of the given key does not already exist it will be written</param>
+        /// <param name="registryVersion">Version of the registry to write to. Can be 32-Bit, 64-Bit, or both</param>
+        /// <param name="valueToWrite">Value to write to the key. should be given in the structure (Name, Data)</param>
         public void WriteValue(RegistryKeyRoot registryKeyRoot, string key, RegistryVersion registryVersion,
             List<KeyValuePair<string, object>> valueToWrite)
         {
@@ -145,7 +214,14 @@ namespace RegistryWrapper
             }
             
         }
-
+        /// <summary>
+        /// Writes a subkey to a given key
+        /// </summary>
+        /// <param name="registryKeyRoot">Enum of the root key to read from (e.g. HKEY_LOCAL_MACHINE = LocalMachine)</param>
+        /// <param name="subKey">Path of the subkey to be written to. Allows for nested subkeys to be written even if parts of the path
+        /// do not already exist.</param>
+        /// <param name="registryVersion">Version of the registry to write to. Can be 32-Bit, 64-Bit, or both</param>
+        /// <param name="valuesToWrite">Values to be written to the given subkey</param>
         public void WriteSubKey(RegistryKeyRoot registryKeyRoot, string subKey, 
             RegistryVersion registryVersion, [Optional] List<KeyValuePair<string, object>> valuesToWrite)
         {
@@ -206,7 +282,13 @@ namespace RegistryWrapper
             }
             rk.Flush();
         }
-
+        /// <summary>
+        /// Deletes a given subkey
+        /// </summary>
+        /// <param name="registryKeyRoot">Enum of the root key to delete from (e.g. HKEY_LOCAL_MACHINE = LocalMachine)</param>
+        /// <param name="subKey">Path of the subkey to be deleted</param>
+        /// <param name="registryVersion">Version of the registry to delete from. Can be 32-Bit, 64-Bit, or both</param>
+        /// <param name="forceSubKeyTreeDeletion">Can be used to force deletion of subkey tree. Defaults to false</param>
         public void DeleteSubKey(RegistryKeyRoot registryKeyRoot, string subKey, RegistryVersion registryVersion , [Optional] bool forceSubKeyTreeDeletion)
         {
             RegistryKey rk;
@@ -224,7 +306,7 @@ namespace RegistryWrapper
                     }
                     catch (NullReferenceException e)
                     {
-                        throw new NullReferenceException(nullRefMsg, e);
+                        throw new NullReferenceException(NullRefMsg, e);
                     }
                     catch (InvalidOperationException e)
                     {
@@ -232,7 +314,7 @@ namespace RegistryWrapper
                         {
                             DeleteSubKeyTree(registryKeyRoot, subKey, registryVersion);
                         }
-                        else throw new InvalidOperationException(invalidOpMsg, e);
+                        else throw new InvalidOperationException(InvalidOpMsg, e);
                     }
 
                     rk = DetermineRootKey(registryKeyRoot);
@@ -242,7 +324,7 @@ namespace RegistryWrapper
                     }
                     catch (NullReferenceException e)
                     {
-                        throw new NullReferenceException(nullRefMsg, e);
+                        throw new NullReferenceException(NullRefMsg, e);
                     }
                     catch (InvalidOperationException e)
                     {
@@ -250,7 +332,7 @@ namespace RegistryWrapper
                         {
                             DeleteSubKeyTree(registryKeyRoot, subKey, registryVersion);
                         }
-                        else throw new InvalidOperationException(invalidOpMsg, e);
+                        else throw new InvalidOperationException(InvalidOpMsg, e);
                     }
 
                     break;
@@ -262,11 +344,11 @@ namespace RegistryWrapper
                     {
                         rk.DeleteSubKey(subKey);
                     }
-                    catch (NullReferenceException e) { throw new NullReferenceException(nullRefMsg, e);}
+                    catch (NullReferenceException e) { throw new NullReferenceException(NullRefMsg, e);}
                     catch (InvalidOperationException e)
                     {
                         if (forceSubKeyTreeDeletion) { DeleteSubKeyTree(registryKeyRoot, subKey, registryVersion); }
-                        else throw new InvalidOperationException(invalidOpMsg, e);
+                        else throw new InvalidOperationException(InvalidOpMsg, e);
                     }
                     break;
                 default:
@@ -277,7 +359,7 @@ namespace RegistryWrapper
                     }
                     catch (NullReferenceException e)
                     {
-                        throw new NullReferenceException(nullRefMsg, e);
+                        throw new NullReferenceException(NullRefMsg, e);
                     }
                     catch (InvalidOperationException e)
                     {
@@ -285,14 +367,19 @@ namespace RegistryWrapper
                         {
                             DeleteSubKeyTree(registryKeyRoot, subKey, registryVersion);
                         }
-                        else throw new InvalidOperationException(invalidOpMsg, e);
+                        else throw new InvalidOperationException(InvalidOpMsg, e);
                     }
                     break;
 
             }
             rk.Flush();
         }
-
+        /// <summary>
+        /// Deletes a given subkey and all of its subkeys
+        /// </summary>
+        /// <param name="registryKeyRoot">Enum of the root key to delete from (e.g. HKEY_LOCAL_MACHINE = LocalMachine)</param>
+        /// <param name="subKey">Path of the subkey to be deleted</param>
+        /// <param name="registryVersion">Version of the registry to delete from. Can be 32-Bit, 64-Bit, or both</param>
         public void DeleteSubKeyTree(RegistryKeyRoot registryKeyRoot, string subKey,RegistryVersion registryVersion)
         {
             RegistryKey rk;
@@ -322,7 +409,13 @@ namespace RegistryWrapper
             }
             rk.Flush();
         }
-
+        /// <summary>
+        /// Deletes a value from a given subkey
+        /// </summary>
+        /// <param name="registryKeyRoot">Enum of the root key to delete from (e.g. HKEY_LOCAL_MACHINE = LocalMachine)</param>
+        /// <param name="subKey">Path of the subkey to delete the value from</param>
+        /// <param name="value">Value to be deleted</param>
+        /// <param name="registryVersion">Version of the registry to delete from. Can be 32-Bit, 64-Bit, or both</param>
         public void DeleteValue(RegistryKeyRoot registryKeyRoot, string subKey, string value, RegistryVersion registryVersion)
         {
             RegistryKey rk;
@@ -355,7 +448,7 @@ namespace RegistryWrapper
                     }
                     catch (UnauthorizedAccessException e)
                     {
-                        throw new UnauthorizedAccessException(unauthorizedAccessMsg, e);
+                        throw new UnauthorizedAccessException(UnauthorizedAccessMsg, e);
 
                     }
 
@@ -371,7 +464,7 @@ namespace RegistryWrapper
                     }
                     catch (UnauthorizedAccessException e)
                     {
-                        throw new UnauthorizedAccessException(unauthorizedAccessMsg, e);
+                        throw new UnauthorizedAccessException(UnauthorizedAccessMsg, e);
 
                     }
                     break;
@@ -384,14 +477,18 @@ namespace RegistryWrapper
                     }
                     catch (UnauthorizedAccessException e)
                     {
-                        throw new UnauthorizedAccessException(unauthorizedAccessMsg, e);
+                        throw new UnauthorizedAccessException(UnauthorizedAccessMsg, e);
 
                     }
                     break;
             }
                     rk.Flush();
         }
-
+        /// <summary>
+        /// Determines the root key to be accessed
+        /// </summary>
+        /// <param name="registryKeyRoot"></param>
+        /// <returns>Returns the underlying type that's being wrapped</returns>
         internal RegistryKey DetermineRootKey(RegistryKeyRoot registryKeyRoot)
         {
             RegistryKey rk;
@@ -410,11 +507,11 @@ namespace RegistryWrapper
                 case RegistryKeyRoot.Users:
                     rk = Registry.Users;
                     break;
-                case RegistryKeyRoot.DynData: // Obsolete; On NT based systems use PerformanceData instead
-                    #pragma warning disable 618
+                #pragma warning disable 618
+                case RegistryKeyRoot.DynData:
                     rk = Registry.DynData;
-                    #pragma warning restore 618
                     break;
+                #pragma warning restore 618
                 case RegistryKeyRoot.PerformanceData:
                     rk = Registry.PerformanceData;
                     break;
@@ -425,7 +522,11 @@ namespace RegistryWrapper
 
             return rk;
         }
-
+        /// <summary>
+        /// Determines the root key to be accessed from a string
+        /// </summary>
+        /// <param name="registryKeyRoot"></param>
+        /// <returns>Returns the enum of the root key to be accessed</returns>
         private RegistryKeyRoot DetermineRootKey(string registryKeyRoot)
         {
             RegistryKeyRoot rk;
@@ -443,9 +544,11 @@ namespace RegistryWrapper
                 case "HKEY_USERS":
                     rk = RegistryKeyRoot.Users;
                     break;
-                case "HKEY_DYN_DATA": // Obsolete; On NT based systems use PerformanceData instead
+                #pragma warning disable 618
+                case "HKEY_DYN_DATA":
                     rk = RegistryKeyRoot.DynData;
                     break;
+                #pragma warning restore 618
                 case "HKEY_PERFORMANCE_DATA":
                     rk = RegistryKeyRoot.PerformanceData;
                     break;
@@ -455,7 +558,11 @@ namespace RegistryWrapper
             }
             return rk;
         }
-
+        /// <summary>
+        /// Determines the RegistryHive to be used (the root key but for 32-Bit systems)
+        /// </summary>
+        /// <param name="registryKeyRoot"></param>
+        /// <returns>Returns the RegistryHive (root key)</returns>
         internal RegistryHive DetermineRegistryHive(RegistryKeyRoot registryKeyRoot)
         {
             RegistryHive rh;
@@ -474,9 +581,11 @@ namespace RegistryWrapper
                 case RegistryKeyRoot.Users:
                     rh = RegistryHive.Users;
                     break;
+                #pragma warning disable 618
                 case RegistryKeyRoot.DynData: // Obsolete; On NT based systems use PerformanceData instead
                     rh = RegistryHive.DynData;
                     break;
+                #pragma warning restore 618
                 case RegistryKeyRoot.PerformanceData:
                     rh = RegistryHive.PerformanceData;
                     break;
@@ -486,7 +595,11 @@ namespace RegistryWrapper
             }
             return rh;
         }
-
+        /// <summary>
+        /// Determines the version of the registry to be accessed (64-Bit or 32-Bit)
+        /// </summary>
+        /// <param name="registryVersion"></param>
+        /// <returns>Returns the appropriate RegistryView</returns>
         internal RegistryView DetermineRegistryView(RegistryVersion registryVersion)
         {
             RegistryView rv;
@@ -506,14 +619,21 @@ namespace RegistryWrapper
             }
             return rv;
         }
-
-        private string invalidOpMsg = "The given subKey has subKeys of its own, cannot delete. " +
-                              "Specify parameter forceSubKeyTreeDeletion to" +
-                              " force deletion of this subKey and all" +
-                              " of it's subKeys, or call DeleteSubKeyTree";
-        private string nullRefMsg = "The given suKey does not exist";
-
-        private string unauthorizedAccessMsg = "You do not have permission to write to this key." +
-                                               "Try running as administrator.";
+        /// <summary>
+        /// Message for invalid operations
+        /// </summary>
+        private static readonly string InvalidOpMsg = "The given subKey has subKeys of its own, cannot delete. " +
+                                                      "Specify parameter forceSubKeyTreeDeletion to" +
+                                                      " force deletion of this subKey and all" +
+                                                      " of it's subKeys, or call DeleteSubKeyTree";
+        /// <summary>
+        /// Message for reading from a subkey that does not exist
+        /// </summary>
+        private static readonly string NullRefMsg = "The given subkey does not exist";
+        /// <summary>
+        /// When you forget to run as Administrator, this is what you will see :)
+        /// </summary>
+        private static readonly string UnauthorizedAccessMsg = "You do not have permission to write to this key." +
+                                                               "Try running as administrator.";
     }
 }
